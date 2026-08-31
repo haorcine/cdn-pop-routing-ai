@@ -1,0 +1,13 @@
+timestamp,vung_dia_ly,isp,pop_id,latency_ms,throughput_mbps
+2026-08-30T13:27:40,Nam,VNPT,cloudflare,48.0,2.25
+2026-08-30T13:27:40,Nam,VNPT,vultr_singapore,195.0,7.84
+2026-08-30T13:27:40,Nam,VNPT,vultr_seoul,86.0,103.27
+2026-08-30T13:27:40,Nam,VNPT,linode_singapore,57.0,155.68
+2026-08-30T13:28:45,Nam,VNPT,cloudflare,49.0,1.89
+2026-08-30T13:28:45,Nam,VNPT,vultr_singapore,199.0,2.56
+2026-08-30T13:28:45,Nam,VNPT,vultr_seoul,163.0,8.63
+2026-08-30T13:28:45,Nam,VNPT,linode_singapore,91.0,14.21
+2026-08-30T13:30:08,Nam,VNPT,cloudflare,52.0,1.84
+2026-08-30T13:30:08,Nam,VNPT,vultr_singapore,198.0,2.78
+2026-08-30T13:30:08,Nam,VNPT,vultr_seoul,77.0,95.8
+2026-08-30T13:30:08,Nam,VNPT,linode_singapore,58.0,32.0
