@@ -22,6 +22,6 @@ POPS = {
 }
 
 SO_LAN_PING_MOI_LUOT = 4
-CHU_KY_GIAY = 900
+CHU_KY_GIAY = 600
 THU_MUC_DATA = "data"
 THU_MUC_LOGS = "logs"
