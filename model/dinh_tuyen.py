@@ -89,18 +89,29 @@ class BoDinhTuyen:
     def chon_pop_thay_the(self, dong, pop_dang_loi):
         """Goi Tang 1 de xep hang ung vien, nhung uu tien ung vien nao
         THUC SU co latency thap hon PoP dang loi NGAY TAI THOI DIEM nay.
-        Tra ve (pop_moi, co_tot_hon_khong)."""
+        Tra ve (pop_moi, co_tot_hon_khong).
+
+        LUU Y: danh sach ung vien luon lay tu TOAN BO POPS (hang so toan
+        cuc), khong chi tu cac lop ma mo hinh Tang 1 "biet". Neu du lieu
+        lech nhan nang, mo hinh co the chi hoc duoc rat it lop, gay loi
+        neu chi dung classes_ lam ung vien."""
         xep_hang = self._xep_hang_tang1(
             dong["vung_dia_ly"], dong["isp"], dong["gio"], dong["thu_trong_tuan"]
         )
         lat_dang_loi = dong[f"latency_ms_{pop_dang_loi}"]
-        ung_vien = [p for p in xep_hang if p != pop_dang_loi]
-        ung_vien_tot_hon = [p for p in ung_vien if dong[f"latency_ms_{p}"] < lat_dang_loi]
 
+        ung_vien_theo_tang1 = [p for p in xep_hang if p != pop_dang_loi]
+        ung_vien_tot_hon = [p for p in ung_vien_theo_tang1 if dong[f"latency_ms_{p}"] < lat_dang_loi]
         if ung_vien_tot_hon:
             return ung_vien_tot_hon[0], True
 
-        ung_vien_theo_latency = sorted(ung_vien, key=lambda p: dong[f"latency_ms_{p}"])
+        ung_vien_toan_bo = [p for p in POPS if p != pop_dang_loi]
+        ung_vien_tot_hon_toan_bo = [p for p in ung_vien_toan_bo if dong[f"latency_ms_{p}"] < lat_dang_loi]
+        if ung_vien_tot_hon_toan_bo:
+            uu_tien = [p for p in ung_vien_theo_tang1 if p in ung_vien_tot_hon_toan_bo]
+            return (uu_tien[0] if uu_tien else ung_vien_tot_hon_toan_bo[0]), True
+
+        ung_vien_theo_latency = sorted(ung_vien_toan_bo, key=lambda p: dong[f"latency_ms_{p}"])
         return ung_vien_theo_latency[0], False
 
     # ---------- Ham tong hop: xu ly 1 buoc thoi gian ----------
