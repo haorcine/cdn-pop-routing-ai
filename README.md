@@ -20,22 +20,6 @@ Hệ thống hướng tới việc:
 * 🚨 Phát hiện tình trạng suy giảm/bất thường của PoP.
 * 🔄 Mô phỏng cơ chế **chuyển đổi sang PoP phù hợp hơn**.
 
-### 🔄 Pipeline
-
-```text
-Network Measurement
-        ↓
-   Data Collection
-        ↓
- Data Processing
-        ↓
- Data Analysis
-        ↓
-   AI / ML Model
-        ↓
-   PoP Selection
-        ↓
- PoP Switching
 ```
 
 ---
@@ -176,30 +160,6 @@ data/data_tong_hop.csv
 Dữ liệu sau khi thu thập và xử lý sẽ được sử dụng để nghiên cứu bài toán:
 
 > **Với điều kiện mạng hiện tại, PoP nào phù hợp nhất?**
-
-Các feature có thể bao gồm:
-
-```text
-Region
-ISP
-Time
-Latency
-Throughput
-Historical Network Metrics
-```
-
-Mô hình AI/ML hướng tới:
-
-```text
-Network Conditions
-        ↓
-     ML Model
-        ↓
- Predicted PoP
-        ↓
- Routing Decision
-```
-
 Ngoài lựa chọn PoP, project cũng hướng tới **anomaly detection** để phát hiện khi chất lượng của PoP hiện tại suy giảm.
 
 ---
