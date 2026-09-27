@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Báo cáo kết quả: định tuyến động PoP CDN</title>
+<style>
+:root{
+  --bg:#eef3f8; --panel:#ffffff; --line:#dbe3ee; --text:#1c2534; --muted:#5f6b80;
+  --accent:#ff7a33; --accent2:#2f6fed; --green:#2ea86b; --yellow:#d99a00; --red:#e14b4b;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;}
+.wrap{max-width:980px;margin:0 auto;padding:32px 20px 60px;}
+h1{font-size:1.5rem;margin:0 0 4px;}
+.sub{color:var(--muted);font-size:.85rem;margin-bottom:28px;}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:20px;}
+section h2{font-size:1rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:0 0 16px;}
+section h3{font-size:.85rem;color:var(--text);margin:18px 0 8px;}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+.stat{background:var(--bg);border-radius:10px;padding:14px;text-align:center;}
+.stat .num{font-size:1.4rem;font-weight:700;color:var(--accent2);}
+.stat .lbl{font-size:.72rem;color:var(--muted);margin-top:4px;}
+table{width:100%;border-collapse:collapse;font-size:.85rem;}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);}
+th{color:var(--muted);font-weight:600;font-size:.75rem;text-transform:uppercase;}
+.arch{display:flex;flex-direction:column;align-items:center;padding:6px 0;}
+.arch-step{display:flex;align-items:center;gap:16px;width:100%;max-width:560px;}
+.arch-num{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background:var(--accent2);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;}
+.arch-box{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px 18px;}
+.arch-box b{display:block;font-size:.88rem;margin-bottom:2px;}
+.arch-box span{font-size:.75rem;color:var(--muted);}
+.arch-connector{width:2px;height:26px;background:var(--line);margin-left:17px;align-self:flex-start;}
+.log-case{background:var(--bg);border-radius:10px;padding:14px;font-size:.83rem;margin-top:12px;border-left:3px solid var(--red);}
+.note{font-size:.78rem;color:var(--muted);font-style:italic;margin:4px 0 10px;}
+.limits{margin:0;padding-left:18px;font-size:.85rem;}
+.limits li{margin-bottom:6px;}
+.legend-row{display:flex;gap:16px;font-size:.75rem;color:var(--muted);margin-top:8px;flex-wrap:wrap;}
+.legend-row span{display:inline-flex;align-items:center;gap:5px;}
+.legend-row i{width:12px;height:12px;border-radius:3px;display:inline-block;}
+.tabs{display:flex;gap:8px;margin-bottom:12px;}
+.tabbtn{background:var(--bg);border:1px solid var(--line);color:var(--muted);padding:6px 14px;
+  border-radius:7px;font-size:.78rem;cursor:pointer;font-family:inherit;}
+.tabbtn.on{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:600;}
+.mini-table td,.mini-table th{padding:6px 8px;font-size:.78rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Định tuyến động PoP CDN bằng AI/ML</h1>
+  <div class="sub" id="metaLine">Đang tải dữ liệu...</div>
+
+  <section>
+    <h2>Kiến trúc hệ thống</h2>
+<div class="arch">
+  <div class="arch-step">
+    <div class="arch-num">1</div>
+    <div class="arch-box"><b>Dữ liệu đo</b><span>Latency, throughput theo vùng, ISP, khung giờ</span></div>
+  </div>
+  <div class="arch-connector"></div>
+  <div class="arch-step">
+    <div class="arch-num">2</div>
+    <div class="arch-box"><b>Tầng 1</b><span>Mô hình phân loại chọn PoP (Decision Tree, Random Forest)</span></div>
+  </div>
+  <div class="arch-connector"></div>
+  <div class="arch-step">
+    <div class="arch-num">3</div>
+    <div class="arch-box"><b>Tầng 2</b><span>Giám sát nền, phát hiện bất thường, tự chuyển đổi</span></div>
+  </div>
+</div>
+  </section>
+
+  <section>
+    <h2>Dữ liệu tổng quan</h2>
+    <div class="stat-grid" id="metaStats"></div>
+    <table id="regionTable" style="margin-top:16px"></table>
+  </section>
+
+  <section>
+    <h2>Làm sạch dữ liệu</h2>
+    <div class="stat-grid" id="cleanStats"></div>
+    <h3>Số dòng đánh dấu bất thường (giữ lại, không xóa) theo vùng/ISP/PoP</h3>
+    <table id="cleanTable" class="mini-table"></table>
+  </section>
+
+  <section>
+    <h2>Kết quả Tầng 1: so sánh mô hình phân loại</h2>
+    <table id="tier1Table"></table>
+    <div class="tabs" id="cmTabs"></div>
+    <h3>Ma trận nhầm lẫn — <span id="cmModelName"></span></h3>
+    <svg id="cmSvg" viewBox="0 0 420 380" style="max-width:420px;display:block;margin:0 auto;"></svg>
+    <h3>Chi tiết theo từng lớp (PoP)</h3>
+    <table id="perClassTable" class="mini-table"></table>
+  </section>
+
+  <section>
+    <h2>Tách tập huấn luyện / kiểm tra</h2>
+    <div class="stat-grid" id="splitStats"></div>
+  </section>
+
+  <section>
+    <h2>Kết quả Tầng 2: giám sát và tự chuyển đổi</h2>
+    <div class="stat-grid" id="tier2Stats"></div>
+    <h3>Toàn bộ 8 lần chuyển đổi phát hiện được trên dữ liệu thật</h3>
+    <table id="switchTable" class="mini-table"></table>
+    <div class="stat-grid" id="tier2Extra" style="margin-top:16px"></div>
+  </section>
+
+  <section>
+    <h2>Mô phỏng sự cố</h2>
+    <div class="note" id="simNote"></div>
+    <table id="simTable" class="mini-table"></table>
+  </section>
+
+  <section>
+    <h2>So sánh AI với baseline định tuyến tĩnh</h2>
+    <div class="note" id="baselineNote"></div>
+    <svg id="cmpSvg" viewBox="0 0 640 340" style="width:100%;max-width:640px;display:block;margin:0 auto;"></svg>
+    <div class="legend-row">
+      <span><i style="background:var(--accent2)"></i>So với baseline "khoảng cách"</span>
+      <span><i style="background:var(--yellow)"></i>So với baseline "trung bình lịch sử"</span>
+    </div>
+    <div class="note" id="cmpFootnote" style="margin-top:14px"></div>
+  </section>
+
+  <section>
+    <h2>Hạn chế</h2>
+    <ul class="limits" id="limitsList"></ul>
+  </section>
+</div>
+
+<script src="report-data.js"></script>
+<script>
+const D = REPORT_DATA;
+const svgNS = "http://www.w3.org/2000/svg";
+function el(tag, attrs){ const e=document.createElementNS(svgNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function fmt(n){ return (n===undefined||n===null) ? '--' : n; }
+function statBox(container,label,num){
+  const d=document.createElement('div'); d.className='stat';
+  d.innerHTML='<div class="num">'+num+'</div><div class="lbl">'+label+'</div>';
+  container.appendChild(d);
+}
+
+// ---------- Tong quan ----------
+document.getElementById('metaLine').textContent =
+  D.meta.data_points_pivot + ' bản ghi sau pivot (từ ' + D.meta.data_points_raw + ' dòng đo thô) | Vùng: ' +
+  D.meta.regions.join(', ') + ' | ISP: ' + D.meta.isps.join(', ');
+
+const metaStats = document.getElementById('metaStats');
+statBox(metaStats,'Bản ghi sau pivot', D.meta.data_points_pivot);
+statBox(metaStats,'Dòng đo thô', D.meta.data_points_raw);
+statBox(metaStats,'Số vùng đo', D.meta.regions.length);
+statBox(metaStats,'Số ISP', D.meta.isps.length);
+
+document.getElementById('regionTable').innerHTML =
+  '<tr><th>Vùng</th><th>ISP</th><th>Số lượt đo</th><th>Số ngày</th><th>Ghi chú</th></tr>' +
+  D.meta.days_by_region.map(r=>`<tr><td>${r.region}</td><td>${r.isp}</td><td>${r.luot_do}</td><td>${r.so_ngay}</td><td>${r.ghi_chu||''}</td></tr>`).join('');
+
+// ---------- Lam sach du lieu ----------
+const cleanStats = document.getElementById('cleanStats');
+const tk = D.cleaning.tom_tat;
+statBox(cleanStats,'Dòng đọc ban đầu', tk.dong_doc_ban_dau);
+statBox(cleanStats,'Loại (thiếu latency/throughput)', tk.loai_thieu_latency_throughput);
+statBox(cleanStats,'Loại (giá trị ≤ 0)', tk.loai_latency_throughput_khong_duong);
+statBox(cleanStats,'Loại (trùng khóa)', tk.loai_trung_khoa_timestamp_vung_isp_pop);
+statBox(cleanStats,'Còn lại sau làm sạch', tk.dong_con_lai_data_sach);
+statBox(cleanStats,'Đánh dấu bất thường (giữ lại)', D.cleaning.xu_ly_bat_thuong.tong_so_dong_danh_dau);
+document.getElementById('cleanTable').innerHTML =
+  '<tr><th>Vùng</th><th>ISP</th><th>PoP</th><th>Số dòng</th></tr>' +
+  D.cleaning.xu_ly_bat_thuong.theo_vung_isp_pop.map(r=>`<tr><td>${r.vung}</td><td>${r.isp}</td><td>${r.pop}</td><td>${r.so_dong}</td></tr>`).join('');
+
+// ---------- Tang 1 ----------
+const t1 = document.getElementById('tier1Table');
+t1.innerHTML = '<tr><th>Mô hình</th><th>Accuracy</th><th>Latency TB</th><th>Latency trung vị</th><th>Macro F1</th><th>Weighted F1</th></tr>' +
+  D.tier1.models.map(m=>`<tr><td>${m.name}</td><td>${(m.accuracy*100).toFixed(1)}%</td><td>${m.latency_tb_ms} ms</td><td>${m.latency_trung_vi_ms} ms</td><td>${m.macro_avg.f1.toFixed(2)}</td><td>${m.weighted_avg.f1.toFixed(2)}</td></tr>`).join('');
+
+let cmIndex = 0;
+function renderConfusion(idx){
+  cmIndex = idx;
+  const model = D.tier1.models[idx];
+  const cm = model.confusion_matrix;
+  document.getElementById('cmModelName').textContent = model.name;
+  document.querySelectorAll('#cmTabs .tabbtn').forEach((b,i)=>b.classList.toggle('on', i===idx));
+
+  const n = cm.labels.length;
+  const svg = document.getElementById('cmSvg');
+  svg.innerHTML = '';
+  const size = 70, ox = 140, oy = 34;
+  const maxVal = Math.max(1, ...cm.matrix.flat());
+  for(let i=0;i<n;i++){
+    const lbl = el('text',{x:ox-8,y:oy+i*size+size/2+4,'text-anchor':'end','font-size':10,fill:'var(--muted)'});
+    lbl.textContent = cm.labels[i]; svg.appendChild(lbl);
+    const lblTop = el('text',{x:ox+i*size+size/2,y:oy-12,'text-anchor':'middle','font-size':10,fill:'var(--muted)'});
+    lblTop.textContent = cm.labels[i]; svg.appendChild(lblTop);
+    for(let j=0;j<n;j++){
+      const val = cm.matrix[i][j];
+      const t = val/maxVal;
+      const color = i===j ? `rgba(47,111,237,${0.15+0.7*t})` : `rgba(225,75,75,${0.1+0.5*t})`;
+      svg.appendChild(el('rect',{x:ox+j*size,y:oy+i*size,width:size-3,height:size-3,fill:color,rx:4}));
+      const txt = el('text',{x:ox+j*size+size/2,y:oy+i*size+size/2+4,'text-anchor':'middle','font-size':12,fill:'var(--text)'});
+      txt.textContent = val; svg.appendChild(txt);
+    }
+  }
+
+  document.getElementById('perClassTable').innerHTML =
+    '<tr><th>PoP</th><th>Precision</th><th>Recall</th><th>F1</th><th>Số mẫu</th></tr>' +
+    model.per_class.map(c=>`<tr><td>${c.pop}</td><td>${c.precision.toFixed(2)}</td><td>${c.recall.toFixed(2)}</td><td>${c.f1.toFixed(2)}</td><td>${c.support}</td></tr>`).join('');
+}
+const cmTabs = document.getElementById('cmTabs');
+D.tier1.models.forEach((m,i)=>{
+  const b = document.createElement('button'); b.className='tabbtn'; b.textContent = m.name;
+  b.onclick = ()=>renderConfusion(i);
+  cmTabs.appendChild(b);
+});
+renderConfusion(0);
+
+// ---------- Tach train/test ----------
+const splitStats = document.getElementById('splitStats');
+const sp = D.feature_engineering.train_test_split;
+statBox(splitStats,'Tổng số dòng', sp.tong_so_dong);
+statBox(splitStats,'Tập train', sp.so_mau_train);
+statBox(splitStats,'Tập test', sp.so_mau_test);
+statBox(splitStats,'Tỷ lệ test', sp.ty_le_test_pct+'%');
+statBox(splitStats,'Số lớp (PoP)', D.feature_engineering.so_lop);
+
+// ---------- Tang 2 ----------
+const tier2Stats = document.getElementById('tier2Stats');
+statBox(tier2Stats,'Số lần chuyển đổi (dữ liệu thật)', D.tier2.so_lan_chuyen_doi_thuc_te);
+statBox(tier2Stats,'Chọn được PoP tốt hơn', D.tier2.ty_le_chon_duoc_pop_thay_the_tot_hon);
+statBox(tier2Stats,'Tỷ lệ phát hiện đúng (12 kịch bản mô phỏng)', D.comparison.co_su_co.ty_le_phat_hien_dung_pop_loi_pct.toFixed(0)+'%');
+statBox(tier2Stats,'Thời gian xử lý thuật toán', D.comparison.thoi_gian_phan_ung.thoi_gian_xu_ly_thuat_toan_ms+' ms');
+statBox(tier2Stats,'Chu kỳ chờ phát hiện', D.comparison.thoi_gian_phan_ung.so_chu_ky_do_can_cho.toFixed(2)+' chu kỳ');
+
+document.getElementById('switchTable').innerHTML =
+  '<tr><th>Thời điểm</th><th>Vùng</th><th>ISP</th><th>PoP cũ</th><th>Latency lúc phát hiện</th><th>PoP mới</th><th>Latency PoP mới</th></tr>' +
+  D.tier2.toan_bo_8_lan_chuyen_doi.map(e=>`<tr><td>${e.thoi_diem}</td><td>${e.vung}</td><td>${e.isp}</td><td>${e.pop_cu}</td><td>${e.latency_luc_phat_hien.toFixed(0)} ms</td><td>${e.pop_moi}</td><td>${e.latency_pop_moi.toFixed(0)} ms</td></tr>`).join('');
+
+const tier2Extra = document.getElementById('tier2Extra');
+statBox(tier2Extra,'Isolation Forest báo động', D.tier2.so_lan_bao_dong.isolation_forest+' lần');
+statBox(tier2Extra,'Ngưỡng thống kê báo động', D.tier2.so_lan_bao_dong.nguong_thong_ke+' lần');
+statBox(tier2Extra,'Cả hai cùng xác nhận', D.tier2.so_lan_bao_dong.ca_hai_cung_xac_nhan+' lần');
+
+// ---------- Mo phong su co ----------
+const sim = D.incident_simulation.co_so_dung_de_dung_hinh;
+document.getElementById('simNote').textContent = sim.mo_ta;
+document.getElementById('simTable').innerHTML =
+  '<tr><th>Bước (t)</th><th>Hệ số nhân so với trung vị bình thường</th></tr>' +
+  sim.he_so_nhan_so_voi_trung_vi_binh_thuong.map((v,i)=>`<tr><td>${i}</td><td>×${v}</td></tr>`).join('');
+
+// ---------- Baseline note ----------
+const bk = D.baselines.khoang_cach, bt = D.baselines.trung_binh;
+document.getElementById('baselineNote').innerHTML =
+  `Baseline "khoảng cách": chọn <b>${bk.pop_luon_chon}</b> — ${bk.logic}. Latency TB ${bk.latency_tb_ms} ms (trung vị ${bk.latency_trung_vi_ms} ms).<br>` +
+  `Baseline "trung bình lịch sử": chọn <b>${bt.pop_luon_chon}</b> — ${bt.logic}. Latency TB ${bt.latency_tb_ms} ms (trung vị ${bt.latency_trung_vi_ms} ms).`;
+
+// ---------- Bieu do so sanh ----------
+(function(){
+  const C = D.comparison;
+  const groups = [
+    ['Bình thường — Decision Tree', C.normal.decision_tree.vs_khoang_cach, C.normal.decision_tree.vs_trung_binh],
+    ['Bình thường — Random Forest', C.normal.random_forest.vs_khoang_cach, C.normal.random_forest.vs_trung_binh],
+    ['Có sự cố — TB cả cửa sổ', C.co_su_co.trung_binh_ca_cua_so.vs_khoang_cach, C.co_su_co.trung_binh_ca_cua_so.vs_trung_binh],
+    ['Có sự cố — sau chuyển đổi', C.co_su_co.sau_khi_chuyen_doi.vs_khoang_cach, C.co_su_co.sau_khi_chuyen_doi.vs_trung_binh]
+  ];
+  const svg = document.getElementById('cmpSvg');
+  const maxVal = Math.max(1, ...groups.flatMap(g=>[g[1],g[2]]));
+  const chartH = 220, chartTop = 20, chartBottom = chartTop+chartH;
+  const groupW = 145, barW = 40, gap = 12;
+  groups.forEach(([label, v1, v2], gi)=>{
+    const gx = 25 + gi*groupW;
+    [[v1,'var(--accent2)',0],[v2,'var(--yellow)',barW+gap]].forEach(([val,color,dx])=>{
+      const h = (val/maxVal)*chartH;
+      svg.appendChild(el('rect',{x:gx+dx,y:chartBottom-h,width:barW,height:h,fill:color,rx:4}));
+      const t = el('text',{x:gx+dx+barW/2,y:chartBottom-h-6,'text-anchor':'middle','font-size':11,fill:'var(--text)','font-weight':'700'});
+      t.textContent = '+'+val.toFixed(1)+'%'; svg.appendChild(t);
+    });
+    const lbl = el('text',{x:gx+barW+gap/2,y:chartBottom+20,'text-anchor':'middle','font-size':9.5,fill:'var(--muted)'});
+    const words = label.split(' ');
+    lbl.textContent = label; svg.appendChild(lbl);
+  });
+  svg.appendChild(el('line',{x1:15,y1:chartBottom,x2:620,y2:chartBottom,stroke:'var(--line)'}));
+})();
+
+document.getElementById('cmpFootnote').innerHTML =
+  `<b>Lưu ý đọc biểu đồ:</b> ${D.comparison.co_su_co.chi_tai_dung_luot_dinh.ghi_chu} (luôn +0.0%, không vẽ riêng ở đây). ` +
+  `Cột "sau chuyển đổi" mới phản ánh đúng giá trị thật của Tầng 2: ${D.comparison.co_su_co.sau_khi_chuyen_doi.ghi_chu}. ` +
+  `Số liệu "có sự cố" tính trên ${D.comparison.co_su_co.so_kich_ban_mo_phong} kịch bản mô phỏng.`;
+
+// ---------- Han che ----------
+const limitsList = document.getElementById('limitsList');
+(D.limitations||[]).forEach(l=>{ const li=document.createElement('li'); li.textContent=l; limitsList.appendChild(li); });
+</script>
+</body>
+</html>

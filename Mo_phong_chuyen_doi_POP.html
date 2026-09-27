@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mô phỏng chuyển đổi PoP CDN</title>
+<style>
+:root{
+  --bg:#eef3f8; --panel:#ffffff; --line:#dbe3ee; --text:#1c2534; --muted:#5f6b80;
+  --accent:#ff7a33; --green:#2ea86b; --yellow:#d99a00; --red:#e14b4b;
+  --ocean:#aad4ea; --land:#f5ecd7; --land-edge:#cdb98a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --bg:#0d1420; --panel:#151d2c; --line:#2a3446; --text:#e7ecf5; --muted:#8b96ab;
+    --ocean:#173049; --land:#3a3324; --land-edge:#5a4f36; }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;}
+h1{font-size:1.25rem;margin:0 0 4px;}
+.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+select,button{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.85rem;cursor:pointer;}
+button:hover{border-color:var(--accent);}
+button.primary{background:var(--accent);color:#1c1000;border-color:var(--accent);font-weight:600;}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;}
+@media(max-width:860px){.grid{grid-template-columns:1fr;}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+.panel h2{font-size:.85rem;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+svg{width:100%;height:auto;display:block;}
+.timeline{width:100%;margin:10px 0;}
+.log{max-height:230px;overflow-y:auto;font-size:.8rem;line-height:1.5;}
+.log div{border-bottom:1px dashed var(--line);padding:6px 0;}
+.log .warn{color:var(--red);}
+.status{font-size:.8rem;color:var(--muted);margin-top:8px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;}
+.badge.ok{background:rgba(46,168,107,.15);color:var(--green);}
+.badge.bad{background:rgba(225,75,75,.15);color:var(--red);}
+.demo-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.72rem;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:5px;}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block;}
+.toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(28,37,52,.94);border:1px solid var(--red);
+  color:#fff;padding:6px 14px;border-radius:20px;font-size:.75rem;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap;}
+.toast.show{opacity:1;}
+.pop-label{font-size:11px;fill:var(--text);font-weight:600;}
+.region-label{font-size:11px;fill:var(--text);}
+.lat-label{font-size:10px;fill:var(--muted);}
+.line-base{fill:none;stroke:#9fb0c7;stroke-width:1.6;opacity:.6;transition:stroke .5s,stroke-width .5s,opacity .5s;}
+.line-active{stroke:var(--accent);stroke-width:3;opacity:1;stroke-dasharray:6 5;animation:flow 1.1s linear infinite;filter:drop-shadow(0 0 3px rgba(255,122,51,.6));}
+@keyframes flow{to{stroke-dashoffset:-22;}}
+.line-anom{stroke:var(--red)!important;animation:pulseline .35s ease-in-out 3;}
+@keyframes pulseline{0%,100%{opacity:1;}50%{opacity:.25;}}
+.node-anom{animation:pulsenode .35s ease-in-out 3;}
+@keyframes pulsenode{0%,100%{stroke:var(--red);r:9;}50%{stroke:var(--red);r:13;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mô phỏng định tuyến động và tự chuyển đổi PoP CDN</h1>
+  <div class="sub">Tầng 2: giám sát latency và tự động chuyển PoP khi phát hiện bất thường</div>
+
+  <div class="controls">
+    <select id="scenario">
+      <option value="ngan_han">Kịch bản: sự cố ngắn hạn</option>
+      <option value="keo_dai">Kịch bản: sự cố kéo dài</option>
+    </select>
+    <select id="region">
+      <option value="bac_fpt">Bắc (FPT)</option>
+      <option value="nam_vnpt">Nam (VNPT)</option>
+      <option value="trung_viettel">Trung (Viettel)</option>
+    </select>
+    <button id="playBtn" class="primary">▶ Phát</button>
+    <button id="resetBtn">⟲ Đầu</button>
+  </div>
+
+  <input type="range" id="scrubber" class="timeline" min="0" max="0" value="0">
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Bản đồ định tuyến khu vực</h2>
+      <div class="toast" id="toast"></div>
+      <svg id="diagram" viewBox="0 0 700 520"></svg>
+      <div class="status" id="status">Sẵn sàng, nhấn Phát để xem lại dữ liệu thật</div>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>PoP đang dùng</span>
+        <span><i style="background:#9fb0c7"></i>PoP dự phòng</span>
+        <span><i style="background:var(--red)"></i>Bất thường / đang chuyển</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Nhật ký sự kiện</h2>
+      <div class="log" id="log"></div>
+      <h2 style="margin-top:16px">Demo trực tiếp</h2>
+      <div class="sub" style="margin-bottom:0">Gây sự cố nhân tạo lên một PoP để xem hệ thống tự phát hiện và chuyển đổi</div>
+      <div class="demo-btns" id="demoBtns"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const REGIONS = {
+  bac_fpt:{label:'Bắc (FPT)', pos:[189,227]},
+  trung_viettel:{label:'Trung (Viettel)', pos:[231,274]},
+  nam_vnpt:{label:'Nam (VNPT)', pos:[205,323]}
+};
+const POPS = [
+  {key:'s', name:'Vultr (Singapore)', pos:[138,412], lblDx:-6, lblDy:-16, anchor:'end'},
+  {key:'l', name:'Linode (Singapore)', pos:[172,432], lblDx:8, lblDy:20, anchor:'start'},
+  {key:'k', name:'Vultr (Seoul)', pos:[560,71], lblDx:0, lblDy:-16, anchor:'middle'},
+  {key:'c', name:'Cloudflare (Hong Kong)', pos:[350,172], lblDx:0, lblDy:-16, anchor:'middle'}
+];
+const THRESH = 250;
+
+const DATA = {
+ngan_han:{
+ bac_fpt:[
+  {c:59,s:58,k:138,l:43,p:'l',a:0},{c:63,s:52,k:132,l:41,p:'l',a:0},{c:59,s:53,k:137,l:42,p:'l',a:0},
+  {c:57,s:55,k:136,l:52.9,p:'l',a:0},{c:58,s:56,k:154,l:55,p:'l',a:0},{c:59,s:55,k:137,l:903.1,p:'l',a:1},
+  {c:59,s:54,k:137,l:51.9,p:'s',a:0},{c:56,s:55,k:136,l:52.9,p:'s',a:0},{c:64,s:56,k:130,l:50.9,p:'s',a:0},
+  {c:61,s:57,k:133,l:52.9,p:'s',a:0},{c:61,s:67,k:140,l:52.9,p:'s',a:0},{c:66,s:686,k:134,l:41,p:'s',a:1},
+  {c:99,s:57,k:136,l:43,p:'l',a:0},{c:65,s:56,k:136,l:45,p:'l',a:0},{c:62,s:60,k:192,l:54,p:'l',a:0},
+  {c:62,s:56,k:183,l:44,p:'l',a:0}],
+ nam_vnpt:[
+  {c:51,s:207,k:87,l:108,p:'l',a:0},{c:52,s:206,k:89,l:51,p:'l',a:0},{c:62,s:206,k:81,l:50,p:'l',a:0},
+  {c:52,s:207,k:82,l:52.9,p:'l',a:0},{c:51,s:206,k:81,l:55,p:'l',a:0},{c:52,s:208,k:81,l:903.1,p:'l',a:1},
+  {c:49,s:206,k:82,l:51.9,p:'c',a:0},{c:55,s:254,k:82,l:52.9,p:'c',a:0},{c:53,s:206,k:82,l:50.9,p:'c',a:0},
+  {c:52,s:204,k:85,l:52.9,p:'c',a:0},{c:53,s:248,k:82,l:52.9,p:'c',a:0},{c:52,s:260,k:82,l:50,p:'c',a:0},
+  {c:52,s:236,k:80,l:50,p:'c',a:0},{c:54,s:239,k:87,l:50,p:'c',a:0},{c:53,s:303,k:82,l:53,p:'c',a:0},
+  {c:221,s:294,k:265,l:50,p:'c',a:0}],
+ trung_viettel:[
+  {c:67,s:51,k:235,l:68,p:'s',a:0},{c:46,s:52,k:226,l:54,p:'s',a:0},{c:55,s:48,k:228,l:63,p:'s',a:0},
+  {c:56,s:52.9,k:234,l:52,p:'s',a:0},{c:43,s:55,k:233,l:53,p:'s',a:0},{c:48,s:903.1,k:228,l:69,p:'s',a:1},
+  {c:52,s:51.9,k:240,l:129,p:'c',a:0},{c:46,s:52.9,k:225,l:62,p:'c',a:0},{c:52,s:50.9,k:227,l:54,p:'c',a:0},
+  {c:57,s:52.9,k:233,l:54,p:'c',a:0},{c:48,s:52.9,k:227,l:63,p:'c',a:0},{c:58,s:48,k:228,l:54,p:'c',a:0},
+  {c:49,s:39,k:235,l:54,p:'c',a:0},{c:58,s:52,k:232,l:52,p:'c',a:0},{c:59,s:49,k:229,l:53,p:'c',a:0},
+  {c:51,s:48,k:227,l:53,p:'c',a:0}]
+},
+keo_dai:{
+ bac_fpt:[
+  {c:59,s:58,k:138,l:43,p:'l',a:0},{c:63,s:52,k:132,l:41,p:'l',a:0},{c:59,s:53,k:137,l:42,p:'l',a:0},
+  {c:57,s:55,k:136,l:54.3,p:'l',a:0},{c:58,s:56,k:154,l:55.4,p:'l',a:0},{c:59,s:55,k:137,l:903.1,p:'l',a:1},
+  {c:59,s:54,k:137,l:903.1,p:'s',a:0},{c:56,s:55,k:136,l:903.1,p:'s',a:0},{c:64,s:56,k:130,l:903.1,p:'s',a:0},
+  {c:61,s:57,k:133,l:903.1,p:'s',a:0},{c:61,s:67,k:140,l:903.1,p:'s',a:0},{c:66,s:686,k:134,l:72.8,p:'s',a:1},
+  {c:99,s:57,k:136,l:56,p:'l',a:0},{c:65,s:56,k:136,l:45,p:'l',a:0},{c:62,s:60,k:192,l:54,p:'l',a:0},
+  {c:62,s:56,k:183,l:44,p:'l',a:0},{c:64,s:56,k:142,l:63,p:'l',a:0},{c:61,s:55,k:172,l:41,p:'l',a:0}],
+ nam_vnpt:[
+  {c:51,s:207,k:87,l:108,p:'l',a:0},{c:52,s:206,k:89,l:51,p:'l',a:0},{c:62,s:206,k:81,l:50,p:'l',a:0},
+  {c:52,s:207,k:82,l:54.3,p:'l',a:0},{c:51,s:206,k:81,l:55.4,p:'l',a:0},{c:52,s:208,k:81,l:903.1,p:'l',a:1},
+  {c:49,s:206,k:82,l:903.1,p:'c',a:0},{c:55,s:254,k:82,l:903.1,p:'c',a:0},{c:53,s:206,k:82,l:903.1,p:'c',a:0},
+  {c:52,s:204,k:85,l:903.1,p:'c',a:0},{c:53,s:248,k:82,l:903.1,p:'c',a:0},{c:52,s:260,k:82,l:72.8,p:'c',a:0},
+  {c:52,s:236,k:80,l:56,p:'c',a:0},{c:54,s:239,k:87,l:50,p:'c',a:0},{c:53,s:303,k:82,l:53,p:'c',a:0},
+  {c:221,s:294,k:265,l:50,p:'c',a:0},{c:79,s:114,k:132,l:115,p:'c',a:0},{c:135,s:102,k:144,l:72,p:'c',a:0}],
+ trung_viettel:[
+  {c:67,s:51,k:235,l:68,p:'s',a:0},{c:46,s:52,k:226,l:54,p:'s',a:0},{c:55,s:48,k:228,l:63,p:'s',a:0},
+  {c:56,s:52.9,k:234,l:52,p:'s',a:0},{c:43,s:55.4,k:233,l:53,p:'s',a:0},{c:48,s:903.1,k:228,l:69,p:'s',a:1},
+  {c:52,s:903.1,k:240,l:129,p:'c',a:0},{c:46,s:903.1,k:225,l:62,p:'c',a:0},{c:52,s:903.1,k:227,l:54,p:'c',a:0},
+  {c:57,s:903.1,k:233,l:54,p:'c',a:0},{c:48,s:903.1,k:227,l:63,p:'c',a:0},{c:58,s:72.8,k:228,l:54,p:'c',a:0},
+  {c:49,s:56,k:235,l:54,p:'c',a:0},{c:58,s:52,k:232,l:52,p:'c',a:0},{c:59,s:49,k:229,l:53,p:'c',a:0},
+  {c:51,s:48,k:227,l:53,p:'c',a:0},{c:53,s:50,k:235,l:53,p:'c',a:0},{c:81,s:52,k:231,l:55,p:'c',a:0}]
+}};
+
+let frames=[], idx=0, playing=false, timer=null, curRegion='bac_fpt', prevActive=null;
+const svgNS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('diagram');
+
+function curvePath(p1,p2){
+  const mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
+  const dx=p2[0]-p1[0], dy=p2[1]-p1[1];
+  const dist=Math.max(Math.sqrt(dx*dx+dy*dy),1);
+  const nx=-dy/dist, ny=dx/dist;
+  const bow=Math.min(dist*0.14,75);
+  const cx=mx+nx*bow, cy=my+ny*bow - 4;
+  return `M ${p1[0]},${p1[1]} Q ${cx},${cy} ${p2[0]},${p2[1]}`;
+}
+function colorFor(lat){
+  if(lat>=THRESH) return 'var(--red)';
+  if(lat>=100) return 'var(--yellow)';
+  return 'var(--green)';
+}
+function el(tag,attrs){
+  const e=document.createElementNS(svgNS,tag);
+  for(const k in attrs) e.setAttribute(k,attrs[k]);
+  return e;
+}
+
+function land(d,opacity){
+  return el('path',{d, fill:'var(--land)', stroke:'var(--land-edge)', 'stroke-width':1, opacity: opacity||1});
+}
+
+function buildMap(){
+  svg.innerHTML='';
+  svg.appendChild(el('rect',{x:0,y:0,width:700,height:520,fill:'var(--ocean)'}));
+
+  // China
+  svg.appendChild(land('M130,0 L520,0 L510,70 L470,130 L420,160 L370,175 L320,165 L280,140 L255,150 L200,145 L170,165 L150,150 L140,110 L120,60 Z'));
+  // Hainan
+  svg.appendChild(land('M298,190 L313,188 L316,202 L301,206 Z'));
+  // Indochina (Vietnam + Laos + Cambodia + Thailand)
+  svg.appendChild(land('M255,150 L270,160 L250,185 L225,210 L235,240 L215,265 L225,290 L205,315 L215,335 L195,355 L175,375 L155,390 L140,370 L120,340 L110,300 L115,260 L130,220 L150,190 L170,165 L200,145 Z'));
+  // Malay peninsula
+  svg.appendChild(land('M155,390 L175,375 L188,398 L172,420 L152,412 L145,398 Z'));
+  // Singapore
+  svg.appendChild(land('M148,414 L157,413 L158,420 L149,421 Z'));
+  // Sumatra
+  svg.appendChild(land('M60,400 L105,405 L130,455 L110,485 L70,470 L45,430 Z'));
+  // Java
+  svg.appendChild(land('M120,485 L220,492 L225,502 L128,498 Z'));
+  // Borneo
+  svg.appendChild(land('M255,395 L335,388 L355,430 L325,470 L275,462 L250,428 Z'));
+  // Philippines
+  svg.appendChild(land('M430,220 L460,210 L468,245 L448,262 L428,248 Z'));
+  svg.appendChild(land('M440,290 L468,283 L474,310 L452,320 L436,305 Z'));
+  // Taiwan
+  svg.appendChild(land('M448,180 L465,172 L470,195 L452,200 Z'));
+  // Korea
+  svg.appendChild(land('M545,40 L575,32 L585,65 L575,95 L555,105 L540,85 L535,60 Z'));
+  // Japan
+  svg.appendChild(land('M615,70 L645,55 L660,85 L640,110 L615,100 Z', .85));
+
+  // region markers
+  Object.keys(REGIONS).forEach(k=>{
+    const r=REGIONS[k];
+    const dim = k!==curRegion;
+    const c=el('circle',{cx:r.pos[0],cy:r.pos[1],r:dim?4:6,fill:dim?'var(--muted)':'var(--accent)',stroke:'#fff','stroke-width':1});
+    svg.appendChild(c);
+    const lbl=el('text',{x:r.pos[0]+9,y:r.pos[1]+4,class:'region-label'});
+    lbl.textContent=r.label;
+    svg.appendChild(lbl);
+  });
+
+  // pop lines
+  const origin=REGIONS[curRegion].pos;
+  POPS.forEach(pop=>{
+    const path=el('path',{id:'line-'+pop.key, d:curvePath(origin,pop.pos), class:'line-base'});
+    svg.appendChild(path);
+  });
+  // pop nodes + labels
+  POPS.forEach(pop=>{
+    const node=el('circle',{id:'node-'+pop.key,cx:pop.pos[0],cy:pop.pos[1],r:8,fill:'var(--panel)',stroke:'#9fb0c7','stroke-width':2});
+    svg.appendChild(node);
+    const lbl=el('text',{x:pop.pos[0]+pop.lblDx,y:pop.pos[1]+pop.lblDy,'text-anchor':pop.anchor,class:'pop-label'});
+    lbl.textContent=pop.name;
+    svg.appendChild(lbl);
+    const lat=el('text',{id:'lat-'+pop.key,x:pop.pos[0]+pop.lblDx,y:pop.pos[1]+pop.lblDy+14,'text-anchor':pop.anchor,class:'lat-label'});
+    lat.textContent='--';
+    svg.appendChild(lat);
+  });
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+function log(msg,warn){
+  const div=document.createElement('div');
+  if(warn) div.className='warn';
+  div.textContent=msg;
+  document.getElementById('log').prepend(div);
+}
+
+function render(frame, anomEvent){
+  if(!frame) return;
+  POPS.forEach(pop=>{
+    const lat=frame[pop.key];
+    const isActive=frame.p===pop.key;
+    const pathEl=document.getElementById('line-'+pop.key);
+    const nodeEl=document.getElementById('node-'+pop.key);
+    const latEl=document.getElementById('lat-'+pop.key);
+    latEl.textContent=Math.round(lat)+' ms';
+    latEl.style.fill=colorFor(lat);
+    pathEl.setAttribute('class', isActive? 'line-base line-active':'line-base');
+    nodeEl.setAttribute('stroke', isActive?'var(--accent)':'#9fb0c7');
+    nodeEl.setAttribute('stroke-width', isActive?3:2);
+  });
+  if(anomEvent){
+    const oldPath=document.getElementById('line-'+anomEvent.from);
+    const oldNode=document.getElementById('node-'+anomEvent.from);
+    oldPath.classList.add('line-anom'); oldNode.classList.add('node-anom');
+    setTimeout(()=>{oldPath.classList.remove('line-anom'); oldNode.classList.remove('node-anom');}, 1100);
+  }
+}
+
+function loadScenario(){
+  clearInterval(timer); playing=false; document.getElementById('playBtn').textContent='▶ Phát';
+  const scen=document.getElementById('scenario').value;
+  curRegion=document.getElementById('region').value;
+  frames=DATA[scen][curRegion];
+  idx=0; prevActive=null;
+  document.getElementById('scrubber').max=frames.length-1;
+  document.getElementById('scrubber').value=0;
+  document.getElementById('log').innerHTML='';
+  buildMap();
+  render(frames[0]);
+  prevActive=frames[0].p;
+  document.getElementById('status').textContent='Sẵn sàng (' + frames.length + ' bản ghi)';
+}
+
+function step(){
+  if(idx>=frames.length){playing=false;clearInterval(timer);document.getElementById('playBtn').textContent='▶ Phát';return;}
+  const f=frames[idx];
+  const switched = prevActive!==null && prevActive!==f.p;
+  render(f, f.a? {from:f.p}: null);
+  document.getElementById('scrubber').value=idx;
+  const popName=POPS.find(p=>p.key===f.p).name;
+  if(f.a){
+    document.getElementById('status').innerHTML='<span class="badge bad">Phát hiện bất thường</span> latency vượt ngưỡng';
+    log('Bản ghi #'+idx+': phát hiện bất thường, latency = '+Math.round(f[f.p])+' ms', true);
+    showToast('Phát hiện bất thường tại '+popName+' ('+Math.round(f[f.p])+' ms)');
+  } else {
+    document.getElementById('status').innerHTML='<span class="badge ok">Bình thường</span> đang dùng '+popName;
+  }
+  if(switched){
+    const fromName=POPS.find(p=>p.key===prevActive).name;
+    log('Chuyển từ '+fromName+' sang '+popName);
+    showToast('Chuyển đổi: '+fromName+' sang '+popName);
+  }
+  prevActive=f.p;
+  idx++;
+}
+
+document.getElementById('playBtn').onclick=()=>{
+  playing=!playing;
+  document.getElementById('playBtn').textContent=playing?'⏸ Tạm dừng':'▶ Phát';
+  if(playing){timer=setInterval(step,750);} else {clearInterval(timer);}
+};
+document.getElementById('resetBtn').onclick=()=>{
+  idx=0; clearInterval(timer); playing=false; document.getElementById('playBtn').textContent='▶ Phát';
+  prevActive=frames[0].p; render(frames[0]); document.getElementById('scrubber').value=0; document.getElementById('log').innerHTML='';
+};
+document.getElementById('scrubber').oninput=(e)=>{
+  clearInterval(timer); playing=false; document.getElementById('playBtn').textContent='▶ Phát';
+  idx=parseInt(e.target.value); render(frames[idx]); prevActive=frames[idx].p;
+};
+document.getElementById('scenario').onchange=loadScenario;
+document.getElementById('region').onchange=loadScenario;
+
+const demoBtns=document.getElementById('demoBtns');
+POPS.forEach(pop=>{
+  const btn=document.createElement('button');
+  btn.textContent='Gây sự cố '+pop.name;
+  btn.onclick=()=>{
+    clearInterval(timer); playing=false; document.getElementById('playBtn').textContent='▶ Phát';
+    const base=frames[idx]||frames[0];
+    const spiked=Object.assign({},base,{a:0});
+    spiked[pop.key]=850;
+    render(spiked);
+    document.getElementById('status').innerHTML='<span class="badge bad">Đang gây sự cố '+pop.name+'</span>';
+    log('[Demo] Gây nghẽn nhân tạo tới '+pop.name+' (850 ms)');
+    setTimeout(()=>{
+      render(spiked, {from:pop.key});
+      document.getElementById('status').innerHTML='<span class="badge bad">Phát hiện bất thường</span>';
+      log('[Demo] Tầng 2 phát hiện latency '+Math.round(spiked[pop.key])+' ms vượt ngưỡng '+THRESH+' ms', true);
+      showToast('Phát hiện bất thường tại '+pop.name);
+      setTimeout(()=>{
+        const candidates=POPS.filter(p=>p.key!==pop.key);
+        const best=candidates.reduce((a,b)=> spiked[a.key]<spiked[b.key]?a:b);
+        const switched=Object.assign({},spiked,{p:best.key,a:0});
+        render(switched);
+        document.getElementById('status').innerHTML='<span class="badge ok">Đã chuyển sang '+best.name+'</span>';
+        log('[Demo] Tầng 1 chọn PoP thay thế: '+best.name+' ('+Math.round(spiked[best.key])+' ms). Chuyển đổi hoàn tất.');
+        showToast('Chuyển đổi: '+pop.name+' sang '+best.name);
+      },900);
+    },900);
+  };
+  demoBtns.appendChild(btn);
+});
+
+loadScenario();
+</script>
+</body>
+</html>
