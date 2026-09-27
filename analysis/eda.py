@@ -72,7 +72,7 @@ def ve_bieu_do():
     plt.close()
     print(f"Da luu {duong_dan}")
 
-        # 5. Throughput theo gio trong ngay
+    # 5. Throughput theo gio trong ngay
     plt.figure(figsize=(10, 5))
     sns.lineplot(data=df, x="gio", y="throughput_mbps", hue="pop_id", errorbar=("ci", 95), marker="o")
     plt.title("Throughput trung binh theo gio trong ngay")
@@ -84,6 +84,21 @@ def ve_bieu_do():
     plt.savefig(duong_dan, dpi=150)
     plt.close()
     print(f"Da luu {duong_dan}")
+
+    # 6. Tuong quan giua latency va throughput
+    plt.figure(figsize=(8, 6))
+    sns.scatterplot(data=df, x="latency_ms", y="throughput_mbps", hue="pop_id", alpha=0.6)
+    plt.title("Tuong quan giua latency va throughput")
+    plt.xlabel("Latency (ms)")
+    plt.ylabel("Throughput (Mbps)")
+    plt.tight_layout()
+    duong_dan = os.path.join(THU_MUC_RA, "06_tuong_quan_latency_throughput.png")
+    plt.savefig(duong_dan, dpi=150)
+    plt.close()
+    print(f"Da luu {duong_dan}")
+
+    he_so_tuong_quan = df["latency_ms"].corr(df["throughput_mbps"])
+    print(f"He so tuong quan Pearson (latency vs throughput): {he_so_tuong_quan:.3f}")
 
     print("\nThong ke nhanh latency theo PoP:")
     print(df.groupby("pop_id")["latency_ms"].describe()[["count", "mean", "50%", "std"]].round(1))
