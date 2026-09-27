@@ -72,6 +72,19 @@ def ve_bieu_do():
     plt.close()
     print(f"Da luu {duong_dan}")
 
+        # 5. Throughput theo gio trong ngay
+    plt.figure(figsize=(10, 5))
+    sns.lineplot(data=df, x="gio", y="throughput_mbps", hue="pop_id", errorbar=("ci", 95), marker="o")
+    plt.title("Throughput trung binh theo gio trong ngay")
+    plt.xlabel("Gio (0-23)")
+    plt.ylabel("Throughput (Mbps)")
+    plt.xticks(range(0, 24))
+    plt.tight_layout()
+    duong_dan = os.path.join(THU_MUC_RA, "05_throughput_theo_gio.png")
+    plt.savefig(duong_dan, dpi=150)
+    plt.close()
+    print(f"Da luu {duong_dan}")
+
     print("\nThong ke nhanh latency theo PoP:")
     print(df.groupby("pop_id")["latency_ms"].describe()[["count", "mean", "50%", "std"]].round(1))
 
