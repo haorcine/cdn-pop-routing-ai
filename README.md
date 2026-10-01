@@ -1,11 +1,11 @@
 # 📡 CDN PoP Routing AI
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![Status](https://img.shields.io/badge/status-core%20pipeline%20complete-brightgreen.svg)
+![Status](https://img.shields.io/badge/status-in%20progress-yellow.svg)
 ![Project](https://img.shields.io/badge/project-academic-purple.svg)
 ![License](https://img.shields.io/badge/license-academic-lightgrey.svg)
 
-Đồ án cuối kỳ môn **Dịch vụ mạng Internet** — xây dựng hệ thống đo lường hạ tầng mạng và mô hình **AI/ML định tuyến động** để tự động chọn **CDN Point of Presence (PoP)** tối ưu theo vùng địa lý, ISP, khung giờ, đồng thời **tự phát hiện và tự chuyển đổi** khi một PoP suy giảm hiệu năng (mô phỏng bối cảnh đứt cáp quang biển tại Việt Nam).
+Đồ án cuối kỳ môn **Dịch vụ mạng Internet** - xây dựng hệ thống đo lường hạ tầng mạng và mô hình **AI/ML định tuyến động** để tự động chọn **CDN Point of Presence (PoP)** tối ưu theo vùng địa lý, ISP, khung giờ, đồng thời **tự phát hiện và tự chuyển đổi** khi một PoP suy giảm hiệu năng (mô phỏng bối cảnh đứt cáp quang biển tại Việt Nam).
 
 ---
 
@@ -24,25 +24,25 @@
 
 ```text
 ┌───────────────────────────────────────────────┐
-│  Dữ liệu đo: latency + throughput              │
-│  theo vùng, ISP, khung giờ, thứ trong tuần      │
-└───────────────────────┬─────────────────────────┘
-                         ↓
+│  Dữ liệu đo: latency + throughput             │
+│  theo vùng, ISP, khung giờ, thứ trong tuần    │
+└───────────────────────┬───────────────────────┘
+                        ↓
 ┌───────────────────────────────────────────────┐
-│  TẦNG 1 — Mô hình phân loại chọn PoP            │
-│  Decision Tree / Random Forest                  │
-│  (chọn PoP ban đầu + xếp hạng ứng viên)         │
-└───────────────────────┬─────────────────────────┘
-                         ↓
+│  TẦNG 1 — Mô hình phân loại chọn PoP          │
+│  Decision Tree / Random Forest                │
+│  (chọn PoP ban đầu + xếp hạng ứng viên)       │
+└───────────────────────┬───────────────────────┘
+                        ↓
 ┌───────────────────────────────────────────────┐
-│  TẦNG 2 — Giám sát nền & tự chuyển đổi          │
-│  Isolation Forest (riêng từng PoP)              │
-│       AND  ngưỡng thống kê (TB + 3σ)            │
-│  → trigger gọi lại Tầng 1 khi cả 2 đồng thuận   │
-└───────────────────────┬─────────────────────────┘
-                         ↓
+│  TẦNG 2 — Giám sát nền & tự chuyển đổi        │
+│  Isolation Forest (riêng từng PoP)            │
+│       AND  ngưỡng thống kê (TB + 3σ)          │
+│  → trigger gọi lại Tầng 1 khi cả 2 đồng thuận │
+└───────────────────────┬───────────────────────┘
+                        ↓
 ┌───────────────────────────────────────────────┐
-│         PoP đang dùng (tự cập nhật)             │
+│         PoP đang dùng (tự cập nhật)           │
 └───────────────────────────────────────────────┘
 ```
 
@@ -101,7 +101,7 @@ cdn-pop-routing-ai/
 * 🐍 Python **3.8+**
 * 🔗 `curl`
 * 💻 Windows / Linux / macOS
-* (Tùy chọn, để chạy demo thật) [Clumsy](https://jagt.github.io/clumsy/) — công cụ giả lập độ trễ mạng trên Windows
+* (Tùy chọn, để chạy demo thật) [Clumsy](https://jagt.github.io/clumsy/) - công cụ giả lập độ trễ mạng trên Windows
 
 Clone repository:
 
@@ -136,7 +136,7 @@ Sau khi gộp (`merge_data.py`), làm sạch (`clean_data.py`) và pivot (`pivot
 
 ---
 
-## 🤖 Tầng 1 — Mô hình phân loại chọn PoP
+## 🤖 Tầng 1 - Mô hình phân loại chọn PoP
 
 Huấn luyện trên 4 đặc trưng ngữ cảnh (vùng, ISP, giờ, thứ trong tuần), nhãn là `pop_toi_uu`:
 
@@ -149,7 +149,7 @@ Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khi
 
 ---
 
-## 🚨 Tầng 2 — Phát hiện bất thường & tự chuyển đổi
+## 🚨 Tầng 2 - Phát hiện bất thường & tự chuyển đổi
 
 * **Isolation Forest** huấn luyện riêng cho từng PoP trên latency + throughput lịch sử của chính nó.
 * **Ngưỡng thống kê** (trung bình + 3 lần độ lệch chuẩn) tính sẵn ở bước làm sạch dữ liệu.
@@ -166,7 +166,7 @@ Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khi
 | Cải thiện latency, sự cố ngắn hạn (sau chuyển đổi) | +4,7% / +0,5% so với 2 baseline |
 | Cải thiện latency, sự cố kéo dài (sau chuyển đổi) | +92,5% / +87,7% so với 2 baseline |
 
-> Luận điểm chính: giá trị của Tầng 2 **tỷ lệ thuận với độ dài sự cố** — baseline tĩnh không có cơ chế phản ứng nên chịu thiệt hại kéo dài suốt thời gian sự cố, trong khi hệ thống AI chuyển PoP ngay khi phát hiện.
+> Luận điểm chính: giá trị của Tầng 2 **tỷ lệ thuận với độ dài sự cố** - baseline tĩnh không có cơ chế phản ứng nên chịu thiệt hại kéo dài suốt thời gian sự cố, trong khi hệ thống AI chuyển PoP ngay khi phát hiện.
 
 ---
 
@@ -189,8 +189,8 @@ Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khi
 
 ## 🔄 Trực quan hóa
 
-* **`Mo_phong_chuyen_doi_POP.html`** — bản đồ khu vực (Việt Nam, Singapore, Hàn Quốc, Hồng Kông), hiển thị trực quan quá trình chuyển đổi PoP: phát lại dữ liệu thật/kịch bản mô phỏng, hoặc tự bấm gây sự cố để xem hệ thống phản ứng ngay trên giao diện.
-* **`web_data/report/report.html`** — trang báo cáo tổng hợp (EDA, kết quả Tầng 1/Tầng 2, so sánh baseline), đọc số liệu từ `report-data.js` do pipeline Python xuất ra, mở trực tiếp bằng trình duyệt không cần server.
+* **`Mo_phong_chuyen_doi_POP.html`** - bản đồ khu vực (Việt Nam, Singapore, Hàn Quốc, Hồng Kông), hiển thị trực quan quá trình chuyển đổi PoP: phát lại dữ liệu thật/kịch bản mô phỏng, hoặc tự bấm gây sự cố để xem hệ thống phản ứng ngay trên giao diện.
+* **`web_data/report/report.html`** - trang báo cáo tổng hợp (EDA, kết quả Tầng 1/Tầng 2, so sánh baseline), đọc số liệu từ `report-data.js` do pipeline Python xuất ra, mở trực tiếp bằng trình duyệt không cần server.
 
 ---
 
@@ -209,7 +209,7 @@ Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khi
 | Mô phỏng sự cố (ngắn hạn & kéo dài) | 🟢 Done |
 | Demo thật (ping trực tiếp + giả lập nghẽn mạng) | 🟢 Done |
 | Trang trực quan hóa (bản đồ động + báo cáo tĩnh) | 🟢 Done |
-| Viết báo cáo (Chương IV–VI) | 🟡 Đang hoàn thiện |
+| Viết báo cáo (Chương I-II-III-IV-V-VI-VII) | 🟢 Done |
 
 ---
 
