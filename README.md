@@ -1,60 +1,49 @@
 # 📡 CDN PoP Routing AI
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![Status](https://img.shields.io/badge/status-in%20progress-yellow.svg)
+![Status](https://img.shields.io/badge/status-core%20pipeline%20complete-brightgreen.svg)
 ![Project](https://img.shields.io/badge/project-academic-purple.svg)
 ![License](https://img.shields.io/badge/license-academic-lightgrey.svg)
 
-Đồ án cuối kỳ môn **Dịch vụ mạng Internet** - xây dựng hệ thống thu thập dữ liệu mạng và nghiên cứu mô hình **AI/ML định tuyến động**, nhằm lựa chọn **CDN Point of Presence (PoP)** phù hợp dựa trên khu vực địa lý, ISP, thời gian và điều kiện mạng.
+Đồ án cuối kỳ môn **Dịch vụ mạng Internet** — xây dựng hệ thống đo lường hạ tầng mạng và mô hình **AI/ML định tuyến động** để tự động chọn **CDN Point of Presence (PoP)** tối ưu theo vùng địa lý, ISP, khung giờ, đồng thời **tự phát hiện và tự chuyển đổi** khi một PoP suy giảm hiệu năng (mô phỏng bối cảnh đứt cáp quang biển tại Việt Nam).
 
 ---
 
 ## 🎯 Mục tiêu
 
-Hệ thống hướng tới việc:
-
-* 📊 Thu thập **latency** và **throughput** từ nhiều PoP.
-* 🌐 So sánh chất lượng kết nối theo **khu vực và ISP**.
-* ⏱️ Theo dõi sự thay đổi hiệu năng theo thời gian.
-* 🤖 Sử dụng dữ liệu để xây dựng mô hình **AI/ML lựa chọn PoP**.
-* 🚨 Phát hiện tình trạng suy giảm/bất thường của PoP.
-* 🔄 Mô phỏng cơ chế **chuyển đổi sang PoP phù hợp hơn**.
-
-```
+* 📊 Thu thập **latency** và **throughput** thật tới 4 PoP đại diện (Cloudflare, Vultr Singapore, Vultr Seoul, Linode Singapore), theo 3 vùng địa lý và 3 ISP (Bắc–FPT, Trung–Viettel, Nam–VNPT).
+* 🧠 Xây dựng mô hình phân loại (**Tầng 1**) dự đoán PoP tối ưu theo ngữ cảnh vùng/ISP/giờ/thứ.
+* 🚨 Xây dựng cơ chế giám sát nền (**Tầng 2**) phát hiện bất thường và tự động chuyển PoP, không cần can thiệp thủ công.
+* ⚖️ So sánh định lượng với 2 baseline định tuyến tĩnh (kiểu GeoDNS, và theo latency trung bình lịch sử).
+* 🧪 Mô phỏng 2 dạng sự cố (ngắn hạn và kéo dài) và chạy demo thật bằng công cụ giả lập độ trễ mạng.
+* 🗺️ Trực quan hóa toàn bộ quy trình và kết quả bằng các trang web tương tác.
 
 ---
 
-## 🏗️ Kiến trúc
+## 🏗️ Kiến trúc 2 tầng
 
 ```text
-┌──────────────┐
-│    User      │
-└──────┬───────┘
-       ↓
-┌──────────────┐
-│   Collector  │
-└──────┬───────┘
-       ↓
-┌────────────────────────┐
-│ Latency + Throughput   │
-└───────────┬────────────┘
-            ↓
-┌────────────────────────┐
-│      CSV Dataset       │
-└───────────┬────────────┘
-            ↓
-┌────────────────────────┐
-│ Data Processing /      │
-│ Analysis               │
-└───────────┬────────────┘
-            ↓
-┌────────────────────────┐
-│       AI / ML          │
-└───────────┬────────────┘
-            ↓
-┌────────────────────────┐
-│     PoP Selection      │
-└────────────────────────┘
+┌───────────────────────────────────────────────┐
+│  Dữ liệu đo: latency + throughput              │
+│  theo vùng, ISP, khung giờ, thứ trong tuần      │
+└───────────────────────┬─────────────────────────┘
+                         ↓
+┌───────────────────────────────────────────────┐
+│  TẦNG 1 — Mô hình phân loại chọn PoP            │
+│  Decision Tree / Random Forest                  │
+│  (chọn PoP ban đầu + xếp hạng ứng viên)         │
+└───────────────────────┬─────────────────────────┘
+                         ↓
+┌───────────────────────────────────────────────┐
+│  TẦNG 2 — Giám sát nền & tự chuyển đổi          │
+│  Isolation Forest (riêng từng PoP)              │
+│       AND  ngưỡng thống kê (TB + 3σ)            │
+│  → trigger gọi lại Tầng 1 khi cả 2 đồng thuận   │
+└───────────────────────┬─────────────────────────┘
+                         ↓
+┌───────────────────────────────────────────────┐
+│         PoP đang dùng (tự cập nhật)             │
+└───────────────────────────────────────────────┘
 ```
 
 ---
@@ -64,24 +53,45 @@ Hệ thống hướng tới việc:
 ```text
 cdn-pop-routing-ai/
 │
-├── analysis/                  # Phân tích và trực quan hóa dữ liệu
-├── data/                     # CSV dữ liệu thu thập
-├── logs/                     # Log lỗi
-├── model/                    # Thành phần mô hình AI/ML
+├── analysis/
+│   └── hinh_anh/              # Biểu đồ EDA (latency/throughput theo PoP, giờ, vùng-ISP, tương quan)
+├── data/
+│   ├── data_tong_hop.csv      # Dữ liệu gộp từ cả nhóm (dạng dài)
+│   ├── data_sach.csv          # Dữ liệu đã làm sạch
+│   └── data_pivot.csv         # Dữ liệu pivot (1 dòng = 1 thời điểm, đủ 4 PoP) dùng để train
+├── logs/                      # Log lỗi thu thập + log các lần chạy demo thật
+├── model/
+│   ├── train_tier1.py         # Huấn luyện Decision Tree / Random Forest (Tầng 1)
+│   ├── dinh_tuyen.py          # BoDinhTuyen: bộ điều khiển trung tâm 2 tầng
+│   ├── tier2_anomaly.py       # Isolation Forest + ngưỡng thống kê (Tầng 2)
+│   ├── baseline.py            # 2 baseline định tuyến tĩnh để đối chiếu
+│   ├── so_sanh_baseline.py    # So sánh latency AI vs baseline trên tập kiểm tra
+│   ├── mo_phong_su_co_ngan_han.py   # Kịch bản sự cố ngắn hạn (trích hình dạng thật)
+│   ├── mo_phong_su_co_keo_dai.py    # Kịch bản sự cố kéo dài (dựng có căn cứ)
+│   ├── tong_hop_ket_qua.py    # Tổng hợp bảng kết quả cuối cùng (Chương VI)
+│   ├── demo_thuc_te.py        # Demo thật: ping trực tiếp + Clumsy giả lập nghẽn mạng
+│   └── xuat_du_lieu_trang.py  # Xuất JSON/JS cho các trang trực quan hóa
 ├── scripts/
-│   └── merge_data.py         # Gộp dữ liệu của cả nhóm
+│   ├── clean_data.py          # Làm sạch, xử lý thiếu/outlier, tính ngưỡng bất thường
+│   ├── merge_data.py          # Gộp dữ liệu CSV của cả nhóm
+│   ├── pivot_data.py          # Pivot dữ liệu dạng dài sang dạng rộng + gán nhãn pop_toi_uu
+│   └── eda.py                 # Vẽ biểu đồ phân tích khám phá dữ liệu
 ├── src/
 │   └── collector/
-│       ├── latency.py        # Đo latency
-│       ├── throughput.py     # Đo throughput
-│       └── storage.py        # Lưu dữ liệu và log
-│
-├── web_data/                 # Dữ liệu phục vụ mô phỏng/web
-├── config.py                 # Cấu hình cá nhân
-├── run_collector.py          # Chạy collector
-├── Mo_phong_chuyen_doi_POP.html
+│       ├── latency.py         # Đo latency (ping)
+│       ├── throughput.py      # Đo throughput (curl)
+│       └── storage.py         # Lưu dữ liệu và log
+├── web_data/
+│   ├── du_lieu_that.json, su_co_ngan_han.json, su_co_keo_dai.json  # Dữ liệu cho trang mô phỏng động
+│   └── report/
+│       ├── report.html        # Trang báo cáo tổng hợp (đọc report-data.js, mở offline)
+│       └── report-data.js     # Số liệu Chương IV–VI, do script Python xuất ra
+├── Mo_phong_chuyen_doi_POP.html   # Trang mô phỏng động: bản đồ khu vực, phát lại + demo trực tiếp
+├── config.py                  # Cấu hình cá nhân (vùng, ISP của từng thành viên)
+├── run_collector.py           # Chạy collector thu thập liên tục
 └── README.md
 ```
+
 ---
 
 ## ⚙️ Cài đặt
@@ -91,6 +101,7 @@ cdn-pop-routing-ai/
 * 🐍 Python **3.8+**
 * 🔗 `curl`
 * 💻 Windows / Linux / macOS
+* (Tùy chọn, để chạy demo thật) [Clumsy](https://jagt.github.io/clumsy/) — công cụ giả lập độ trễ mạng trên Windows
 
 Clone repository:
 
@@ -110,106 +121,76 @@ curl --version
 
 ## 📊 Dữ liệu thu thập
 
-Mỗi bản ghi gồm các thông tin chính:
+Mỗi bản ghi gồm các trường chính:
 
 | Trường            | Ý nghĩa           |
 | ----------------- | ----------------- |
 | `timestamp`       | Thời điểm đo      |
-| `vung_dia_ly`     | Khu vực           |
-| `isp`             | Nhà mạng          |
-| `pop_id`          | PoP được đo       |
-| `latency_ms`      | Độ trễ            |
-| `throughput_mbps` | Tốc độ truyền tải |
+| `vung_dia_ly`     | Khu vực (Bắc/Trung/Nam) |
+| `isp`             | Nhà mạng (FPT/Viettel/VNPT) |
+| `pop_id`          | PoP được đo (4 PoP) |
+| `latency_ms`      | Độ trễ (ping)      |
+| `throughput_mbps` | Tốc độ truyền tải (curl) |
 
-```
-
----
-
-## 🔗 Gộp dữ liệu cả nhóm
-
-Sau khi các thành viên hoàn thành việc thu thập, đặt các file CSV vào:
-
-```text
-data/
-```
-
-Sau đó chạy:
-
-```bash
-python scripts/merge_data.py
-```
-
-Script sẽ:
-
-* 🔍 Kiểm tra cấu trúc dữ liệu.
-* 🧹 Chuẩn hóa khu vực, ISP và PoP.
-* 🔗 Gộp dữ liệu của các thành viên.
-* 🗑️ Loại bỏ bản ghi trùng hoàn toàn.
-* 📈 Thống kê dữ liệu sau khi gộp.
-
-Dataset tổng hợp:
-
-```text
-data/data_tong_hop.csv
-```
+Sau khi gộp (`merge_data.py`), làm sạch (`clean_data.py`) và pivot (`pivot_data.py`), dữ liệu đạt **5180 dòng đo thô → 1294 bản ghi pivot**, mỗi dòng gồm latency/throughput của cả 4 PoP tại cùng thời điểm, kèm nhãn `pop_toi_uu` (PoP có latency thấp nhất).
 
 ---
 
-## 🤖 AI / ML
+## 🤖 Tầng 1 — Mô hình phân loại chọn PoP
 
-Dữ liệu sau khi thu thập và xử lý sẽ được sử dụng để nghiên cứu bài toán:
+Huấn luyện trên 4 đặc trưng ngữ cảnh (vùng, ISP, giờ, thứ trong tuần), nhãn là `pop_toi_uu`:
 
-> **Với điều kiện mạng hiện tại, PoP nào phù hợp nhất?**
-Ngoài lựa chọn PoP, project cũng hướng tới **anomaly detection** để phát hiện khi chất lượng của PoP hiện tại suy giảm.
+| Mô hình | Accuracy | Macro F1 | Weighted F1 |
+| --- | --- | --- | --- |
+| Decision Tree (`max_depth=5`) | 75,7% | 0,62 | 0,76 |
+| Random Forest (`n_estimators=100`) | 75,3% | 0,63 | 0,75 |
 
----
-
-## 🔄 Mô phỏng chuyển đổi PoP
-
-File:
-
-```text
-Mo_phong_chuyen_doi_POP.html
-```
-
-được sử dụng để mô phỏng quá trình:
-
-```text
-Current PoP
-     ↓
-Monitor
-     ↓
-Detect Degradation
-     ↓
-Evaluate Other PoPs
-     ↓
-Select Candidate
-     ↓
-Switch PoP
-```
-
-Mục đích là minh họa cơ chế **dynamic PoP routing** của hệ thống.
+Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khiển sản xuất) nhờ Macro F1 cao hơn và latency thực tế thấp hơn khi dự đoán, dù accuracy nhỉnh hơn thuộc về Decision Tree.
 
 ---
 
-## 📈 Các chỉ số đánh giá
+## 🚨 Tầng 2 — Phát hiện bất thường & tự chuyển đổi
 
-Hệ thống có thể được đánh giá dựa trên:
+* **Isolation Forest** huấn luyện riêng cho từng PoP trên latency + throughput lịch sử của chính nó.
+* **Ngưỡng thống kê** (trung bình + 3 lần độ lệch chuẩn) tính sẵn ở bước làm sạch dữ liệu.
+* Chỉ kích hoạt chuyển đổi khi **cả hai tín hiệu cùng đồng thuận** bất thường.
+* Khi chuyển đổi: chỉ chấp nhận PoP thay thế có latency thấp hơn PoP đang lỗi tại thời điểm đó, ưu tiên theo thứ hạng của Tầng 1; nếu không có ứng viên nào tốt hơn, chọn PoP có latency thấp nhất hiện tại làm phương án tạm thời và đánh dấu rõ trong log.
 
-### Network Performance
+**Kết quả kiểm chứng (12 kịch bản mô phỏng):**
 
-* ⚡ Latency
-* 🚀 Throughput
-* 📉 Latency variation
-* 📊 Throughput variation
+| Chỉ số | Kết quả |
+| --- | --- |
+| Tỷ lệ phát hiện đúng PoP lỗi | 100% (12/12) |
+| Số chu kỳ chờ để phát hiện | 0 chu kỳ |
+| Thời gian xử lý thuật toán | ~8–27 ms |
+| Cải thiện latency, sự cố ngắn hạn (sau chuyển đổi) | +4,7% / +0,5% so với 2 baseline |
+| Cải thiện latency, sự cố kéo dài (sau chuyển đổi) | +92,5% / +87,7% so với 2 baseline |
 
-### Routing Performance
+> Luận điểm chính: giá trị của Tầng 2 **tỷ lệ thuận với độ dài sự cố** — baseline tĩnh không có cơ chế phản ứng nên chịu thiệt hại kéo dài suốt thời gian sự cố, trong khi hệ thống AI chuyển PoP ngay khi phát hiện.
 
-* 🎯 PoP selection accuracy
-* ⚡ Average latency sau routing
-* 🚀 Average throughput sau routing
-* 🔄 Số lần chuyển PoP
-* ⏱️ Thời gian phục hồi khi PoP suy giảm
+---
+
+## ⚖️ Baseline đối chiếu
+
+| Baseline | Cách chọn | Latency TB (tập test) |
+| --- | --- | --- |
+| Khoảng cách (GeoDNS) | Luôn cố định `vultr_singapore` | 128,2 ms |
+| Latency trung bình lịch sử | Luôn cố định `linode_singapore` | 70,6 ms |
+
+---
+
+## 🧪 Mô phỏng sự cố & Demo thật
+
+* `mo_phong_su_co_ngan_han.py`: trích hình dạng từ một đợt sự cố thật, áp lên PoP được chọn làm nạn nhân (cú sốc thoáng qua).
+* `mo_phong_su_co_keo_dai.py`: dựng dựa trên độ cao đỉnh sự cố thật, giữ trạng thái suy giảm trong nhiều lượt đo liên tiếp (mô phỏng đứt cáp biển).
+* `demo_thuc_te.py`: chạy **thật** trên `BoDinhTuyen`, ping trực tiếp tới 4 PoP, kết hợp [Clumsy](https://jagt.github.io/clumsy/) để làm nghẽn mạng thật và quan sát hệ thống tự phát hiện, tự chuyển đổi theo thời gian thực.
+
+---
+
+## 🔄 Trực quan hóa
+
+* **`Mo_phong_chuyen_doi_POP.html`** — bản đồ khu vực (Việt Nam, Singapore, Hàn Quốc, Hồng Kông), hiển thị trực quan quá trình chuyển đổi PoP: phát lại dữ liệu thật/kịch bản mô phỏng, hoặc tự bấm gây sự cố để xem hệ thống phản ứng ngay trên giao diện.
+* **`web_data/report/report.html`** — trang báo cáo tổng hợp (EDA, kết quả Tầng 1/Tầng 2, so sánh baseline), đọc số liệu từ `report-data.js` do pipeline Python xuất ra, mở trực tiếp bằng trình duyệt không cần server.
 
 ---
 
@@ -217,50 +198,26 @@ Hệ thống có thể được đánh giá dựa trên:
 
 | Thành phần               |     Status     |
 | ------------------------ | :------------: |
-| PoP Configuration        |     🟢 Done    |
-| Latency Collector        |     🟢 Done    |
-| Throughput Collector     |     🟢 Done    |
-| CSV Storage              |     🟢 Done    |
-| Error Logging            |     🟢 Done    |
-| Continuous Collection    |     🟢 Done    |
-| Data Merge               |     🟢 Done    |
-| Data Normalization       |     🟢 Done    |
-| Data Analysis            | 🟡 In Progress |
-| Feature Engineering      | 🟡 In Progress |
-| AI / ML Model            | 🟡 In Progress |
-| Anomaly Detection        | 🟡 In Progress |
-| Dynamic Routing          | 🟡 In Progress |
-| PoP Switching Simulation |  🟢 Available  |
+| Thu thập dữ liệu (Latency/Throughput Collector) | 🟢 Done |
+| Gộp & làm sạch dữ liệu (Merge, Clean, Pivot)     | 🟢 Done |
+| Phân tích khám phá dữ liệu (EDA)                 | 🟢 Done |
+| Xây dựng đặc trưng (Feature Engineering)         | 🟢 Done |
+| Huấn luyện mô hình Tầng 1 (Decision Tree, Random Forest) | 🟢 Done |
+| Tinh chỉnh siêu tham số & Feature importance      | 🟡 Chưa làm |
+| Cơ chế phát hiện bất thường & tự chuyển đổi (Tầng 2) | 🟢 Done |
+| So sánh baseline định tuyến tĩnh                 | 🟢 Done |
+| Mô phỏng sự cố (ngắn hạn & kéo dài)              | 🟢 Done |
+| Demo thật (ping trực tiếp + giả lập nghẽn mạng)   | 🟢 Done |
+| Trang trực quan hóa (bản đồ động + báo cáo tĩnh) | 🟢 Done |
+| Viết báo cáo (Chương IV–VI)                      | 🟡 Đang hoàn thiện |
 
 ---
 
-## 🛣️ Roadmap
+## 🎓 Thông tin đồ án
 
-```text
-✅ Network Data Collection
-        ↓
-✅ Data Aggregation
-        ↓
-🔄 Exploratory Data Analysis
-        ↓
-🔄 Feature Engineering
-        ↓
-🔄 AI / ML Model
-        ↓
-🔄 Anomaly Detection
-        ↓
-🔄 Dynamic PoP Selection
-        ↓
-🔄 Routing Simulation & Evaluation
-```
+**Môn học:** Dịch vụ mạng Internet
+**Tên đề tài:** Xây dựng mô hình AI/ML định tuyến động chọn PoP CDN tối ưu theo vùng địa lý, khung giờ và điều kiện hạ tầng mạng tại Việt Nam
+**Phạm vi:** Network Measurement · AI/ML · Anomaly Detection · Data Visualization
+**Phạm vi khảo sát:** 3 vùng (Bắc/Trung/Nam) × 3 ISP (FPT/Viettel/VNPT) × 4 PoP (Cloudflare, Vultr Singapore, Vultr Seoul, Linode Singapore)
 
----
-
-## 🎓 Academic Project
-
-**Course:** Dịch vụ mạng Internet
-**Project:** CDN PoP Routing AI
-**Scope:** CDN · Network Measurement · Data Analysis · AI/ML
-**Target:** Vietnam
-
-> 📚 Project được phát triển phục vụ mục đích **học tập và nghiên cứu**.
+> 📚 Dự án được phát triển phục vụ mục đích học tập và nghiên cứu.
