@@ -123,8 +123,8 @@ curl --version
 
 Mỗi bản ghi gồm các trường chính:
 
-| Trường              | Ý nghĩa                            |
-| ------------------- | ---------------------------------- |
+| Trường              | Ý nghĩa                           |
+| ------------------- | ----------------------------------|
 | `timestamp`         | Thời điểm đo                      |
 | `vung_dia_ly`       | Khu vực (Bắc/Trung/Nam)           |
 | `isp`               | Nhà mạng (FPT/Viettel/VNPT)       |
