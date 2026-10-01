@@ -123,14 +123,14 @@ curl --version
 
 Mỗi bản ghi gồm các trường chính:
 
-| Trường            | Ý nghĩa           |
-| ----------------- | ----------------- |
-| `timestamp`       | Thời điểm đo      |
-| `vung_dia_ly`     | Khu vực (Bắc/Trung/Nam) |
-| `isp`             | Nhà mạng (FPT/Viettel/VNPT) |
-| `pop_id`          | PoP được đo (4 PoP) |
-| `latency_ms`      | Độ trễ (ping)      |
-| `throughput_mbps` | Tốc độ truyền tải (curl) |
+| Trường              | Ý nghĩa                            |
+| ------------------- | ---------------------------------- |
+| `timestamp`         | Thời điểm đo                      |
+| `vung_dia_ly`       | Khu vực (Bắc/Trung/Nam)           |
+| `isp`               | Nhà mạng (FPT/Viettel/VNPT)       |
+| `pop_id`            | PoP được đo (4 PoP)               |
+| `latency_ms`        | Độ trễ (ping)                     |
+| `throughput_mbps`   | Tốc độ truyền tải (curl)          |
 
 Sau khi gộp (`merge_data.py`), làm sạch (`clean_data.py`) và pivot (`pivot_data.py`), dữ liệu đạt **5180 dòng đo thô → 1294 bản ghi pivot**, mỗi dòng gồm latency/throughput của cả 4 PoP tại cùng thời điểm, kèm nhãn `pop_toi_uu` (PoP có latency thấp nhất).
 
@@ -196,20 +196,20 @@ Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khi
 
 ## 📌 Trạng thái dự án
 
-| Thành phần               |     Status     |
+| Thành phần | Status |
 | ------------------------ | :------------: |
 | Thu thập dữ liệu (Latency/Throughput Collector) | 🟢 Done |
-| Gộp & làm sạch dữ liệu (Merge, Clean, Pivot)     | 🟢 Done |
-| Phân tích khám phá dữ liệu (EDA)                 | 🟢 Done |
-| Xây dựng đặc trưng (Feature Engineering)         | 🟢 Done |
+| Gộp & làm sạch dữ liệu (Merge, Clean, Pivot) | 🟢 Done |
+| Phân tích khám phá dữ liệu (EDA) | 🟢 Done |
+| Xây dựng đặc trưng (Feature Engineering) | 🟢 Done |
 | Huấn luyện mô hình Tầng 1 (Decision Tree, Random Forest) | 🟢 Done |
-| Tinh chỉnh siêu tham số & Feature importance      | 🟡 Chưa làm |
+| Tinh chỉnh siêu tham số & Feature importance | 🟡 Chưa làm |
 | Cơ chế phát hiện bất thường & tự chuyển đổi (Tầng 2) | 🟢 Done |
-| So sánh baseline định tuyến tĩnh                 | 🟢 Done |
-| Mô phỏng sự cố (ngắn hạn & kéo dài)              | 🟢 Done |
-| Demo thật (ping trực tiếp + giả lập nghẽn mạng)   | 🟢 Done |
+| So sánh baseline định tuyến tĩnh | 🟢 Done |
+| Mô phỏng sự cố (ngắn hạn & kéo dài) | 🟢 Done |
+| Demo thật (ping trực tiếp + giả lập nghẽn mạng) | 🟢 Done |
 | Trang trực quan hóa (bản đồ động + báo cáo tĩnh) | 🟢 Done |
-| Viết báo cáo (Chương IV–VI)                      | 🟡 Đang hoàn thiện |
+| Viết báo cáo (Chương IV–VI) | 🟡 Đang hoàn thiện |
 
 ---
 
