@@ -14,7 +14,7 @@
 * 📊 Thu thập **latency** và **throughput** thật tới 4 PoP đại diện (Cloudflare, Vultr Singapore, Vultr Seoul, Linode Singapore), theo 3 vùng địa lý và 3 ISP (Bắc–FPT, Trung–Viettel, Nam–VNPT).
 * 🧠 Xây dựng mô hình phân loại (**Tầng 1**) dự đoán PoP tối ưu theo ngữ cảnh vùng/ISP/giờ/thứ.
 * 🚨 Xây dựng cơ chế giám sát nền (**Tầng 2**) phát hiện bất thường và tự động chuyển PoP, không cần can thiệp thủ công.
-* ⚖️ So sánh định lượng với 2 baseline định tuyến tĩnh (kiểu GeoDNS, và theo latency trung bình lịch sử).
+* ⚖️ So sánh định lượng với 2 Baseline định tuyến tĩnh (kiểu GeoDNS, và theo latency trung bình lịch sử).
 * 🧪 Mô phỏng 2 dạng sự cố (ngắn hạn và kéo dài) và chạy demo thật bằng công cụ giả lập độ trễ mạng.
 * 🗺️ Trực quan hóa toàn bộ quy trình và kết quả bằng các trang web tương tác.
 
@@ -132,7 +132,7 @@ Mỗi bản ghi gồm các trường chính:
 | `latency_ms`        | Độ trễ (ping)                     |
 | `throughput_mbps`   | Tốc độ truyền tải (curl)          |
 
-Sau khi gộp (`merge_data.py`), làm sạch (`clean_data.py`) và pivot (`pivot_data.py`), dữ liệu đạt **5180 dòng đo thô → 1294 bản ghi pivot**, mỗi dòng gồm latency/throughput của cả 4 PoP tại cùng thời điểm, kèm nhãn `pop_toi_uu` (PoP có latency thấp nhất).
+Sau khi gộp (`merge_data.py`), làm sạch (`clean_data.py`) và pivot (`pivot_data.py`), dữ liệu đã đạt **5180 dòng đo thô → 1294 bản ghi pivot**, mỗi dòng gồm latency/throughput của cả 4 PoP tại cùng thời điểm, kèm nhãn `pop_toi_uu` (PoP có latency thấp nhất).
 
 ---
 
