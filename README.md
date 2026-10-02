@@ -209,7 +209,7 @@ Random Forest được chọn triển khai trong `BoDinhTuyen` (bộ điều khi
 | Mô phỏng sự cố (ngắn hạn & kéo dài) | 🟢 Done |
 | Demo thật (ping trực tiếp + giả lập nghẽn mạng) | 🟢 Done |
 | Trang trực quan hóa (bản đồ động + báo cáo tĩnh) | 🟢 Done |
-| Viết báo cáo (Chương I-II-III-IV-V-VI-VII) | 🟢 Done |
+| Viết báo cáo (Chương I-II-III-IV-V-VI-VII)  | 🟢 Done |
 
 ---
 
